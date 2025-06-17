@@ -1,25 +1,29 @@
-from cryptography.fernet import Fernet
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 import base64
 import hashlib
 from colorama import Fore, Style
 
 def generate_key():
-    return Fernet.generate_key().decode()
+    return base64.b64encode(get_random_bytes(16)).decode()
 
 def encrypt_message(message, key):
     try:
-        fernet = Fernet(key)
-        encrypted = fernet.encrypt(message.encode())
-        return encrypted.decode()
+        key = base64.b64decode(key.encode())
+        cipher = AES.new(key, AES.MODE_GCM)
+        ciphertext, tag = cipher.encrypt_and_digest(message.encode())
+        return base64.b64encode(cipher.nonce + tag + ciphertext).decode()
     except Exception as e:
         print(Fore.RED + f"[!] Encryption error: {str(e)}" + Style.RESET_ALL)
         return None
 
 def decrypt_message(encrypted_message, key):
     try:
-        fernet = Fernet(key)
-        decrypted = fernet.decrypt(encrypted_message.encode())
-        return decrypted.decode()
+        key = base64.b64decode(key.encode())
+        data = base64.b64decode(encrypted_message.encode())
+        nonce, tag, ciphertext = data[:16], data[16:32], data[32:]
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        return cipher.decrypt_and_verify(ciphertext, tag).decode()
     except Exception as e:
         print(Fore.RED + f"[!] Decryption error: {str(e)}" + Style.RESET_ALL)
         return None
@@ -120,4 +124,4 @@ def main():
         except Exception as e:
             print(Fore.RED + f"\n[!] Error: {str(e)}" + Style.RESET_ALL)
         
-                        input(Fore.CYAN + "\n[?] Press Enter to continue..." + Style.RESET_ALL)
+        input(Fore.CYAN + "\n[?] Press Enter to continue..." + Style.RESET_ALL)
